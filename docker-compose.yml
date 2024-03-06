@@ -1,0 +1,11 @@
+version: "3"
+services:
+  haskell:
+    image: haskell:9
+    container_name: haskell
+    volumes:
+      - .:/app
+    working_dir: /app
+    command: /bin/bash
+    tty: true
+    stdin_open: true
