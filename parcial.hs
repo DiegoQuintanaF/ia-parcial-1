@@ -90,11 +90,11 @@ instance Show Cita where
   show (Cita usuario anfitrion fecha hora canal) = "Hay una cita con el usuerio, " ++ show usuario ++ ", agendada con el anfitrion, " ++ show anfitrion ++ ", el " ++ show fecha ++ " a las " ++ show hora ++ ", agendada por " ++ show canal
 
 -- Variables
-usuario = Usuario "Juan" "Perez"
-anfitrion = Anfitrion "Pedro" "Gomez"
-fecha = Fecha 10 10 2021
-hora = Hora 10 30
-canal = Canal "Telefono" usuario
+usuario1 = Usuario "Juan" "Perez"
+anfitrion1 = Anfitrion "Pedro" "Gomez"
+fecha1 = Fecha 10 10 2021
+hora1 = Hora 10 30
+canal1 = Canal "Telefono" usuario1
 
 usuario2 = Usuario "Diego" "Quintana"
 anfitrion2 = Anfitrion "Edwin" "Puertas"
@@ -106,11 +106,84 @@ citasAgendadas :: [Cita]
 citasAgendadas = []
 
 -- Reglas
+esUsuario :: Usuario -> Bool
+esUsuario (Usuario nombre apellido) = not (null nombre) && not (null apellido)
+
+esAnfitrion :: Anfitrion -> Bool
+esAnfitrion (Anfitrion nombre apellido) = not (null nombre) && not (null apellido)
+
+esFecha :: Fecha -> Bool
+esFecha (Fecha d m a) = d > 0 && m > 0 && a > 0
+
+esHora :: Hora -> Bool
+esHora (Hora hora min) = hora >= 0 && hora < 24 && min >= 0 && min < 60
+
+esCanal :: Canal -> Bool
+esCanal (Canal c _) = not (null c)
+
+
 hayCitaProgramada :: Usuario -> Anfitrion -> Fecha -> Hora -> Canal -> Bool
-hayCitaProgramada (Usuario u1 u2) (Anfitrion a1 a2) (Fecha d m a) (Hora h min) (Canal c _) = not (null u1) && not (null u2) && not (null a1) && not (null a2) && d > 0 && m > 0 && a > 0 && h >= 0 && h < 24 && min >= 0 && min < 60 && not (null c)
+hayCitaProgramada u a f h c = esUsuario u && esAnfitrion a && esFecha f && esHora h && esCanal c
 
 agendarCita :: Usuario -> Anfitrion -> Fecha -> Hora -> Canal -> [Cita] -> [Cita]
-agendarCita u a f h c cs = cs ++ [Cita u a f h c]
+agendarCita u a f h c cs = cs ++ [(Cita u a f h c)]
+
+
+-- Perdir datos
+pedirUsuario :: IO Usuario
+pedirUsuario = do
+  putStr "Ingrese su nombre: "
+  nombre <- getLine
+  putStr "Ingrese su apellido: "
+  apellido <- getLine
+  return (Usuario nombre apellido)
+
+pedirAnfitrion :: IO Anfitrion
+pedirAnfitrion = do
+  putStr "Ingrese el nombre del anfitrion: "
+  nombre <- getLine
+  putStr "Ingrese el apellido del anfitrion: "
+  apellido <- getLine
+  return (Anfitrion nombre apellido)
+
+pedirFecha :: IO Fecha
+pedirFecha = do
+  putStr "Ingrese el dia: "
+  dia <- readLn
+  putStr "Ingrese el mes: "
+  mes <- readLn
+  putStr "Ingrese el año: "
+  anio <- readLn
+  return (Fecha dia mes anio)
+
+pedirHora :: IO Hora
+pedirHora = do
+  putStr "Ingrese la hora: "
+  hora <- readLn
+  putStr "Ingrese los minutos: "
+  minutos <- readLn
+  return (Hora hora minutos)
+
+pedirCanal usuario = do
+  putStr "Ingrese el canal: "
+  canal <- getLine
+  return (Canal canal usuario)
+
+-- Agendar cita
+agendarCitaIO :: [Cita] -> IO [Cita]
+agendarCitaIO citas = do
+  usuario <- pedirUsuario
+  anfitrion <- pedirAnfitrion
+  fecha <- pedirFecha
+  hora <- pedirHora
+  canal <- (pedirCanal usuario)
+  if hayCitaProgramada usuario anfitrion fecha hora canal
+    then return (agendarCita usuario anfitrion fecha hora canal citas)
+    else do
+      putStrLn "Datos incorrectos, intente de nuevo"
+      agendarCitaIO citas
+
+-- Impresion
 
 imprimir :: Int -> [Cita] -> IO ()
 imprimir _ [] = putStrLn ""
@@ -120,27 +193,56 @@ imprimir count (c:cs) = do
 
 imprimirCitas :: [Cita] -> IO ()
 imprimirCitas = imprimir 1
+  
+llenarCitas :: [Cita] -> IO [Cita]
+llenarCitas (c: cs) = do
+  imprimirCitas (c:cs)
+  putStrLn "Desea agendar una cita? (s/n)"
+  respuesta <- getLine
+  if respuesta == "s"
+    then do
+      cs <- agendarCitaIO (c:cs)
+      llenarCitas cs
+    else return (c:cs)
 
-
--- Main
 -- main :: IO ()
 -- main = do
---   let citas = []
---   agendarCita usuario anfitrion fecha hora canal citas
---   agendarCita usuario2 anfitrion2 fecha2 hora2 canal2 citas
---   -- citas = (agendarCita (Usuario "Diego" "Quintana") (Anfitrion "Edwin" "Puertas") (Fecha 22 10 2024) (Hora 10 30) (Canal "Telefono" (Usuario "Diego" "Quintana"))) citas
---   -- citas = (agendarCita (Usuario "Jesus" "Martinez") (Anfitrion "Karoll" "Pinto") (Fecha 30 11 2024) (Hora 11 30) (Canal "Correo" (Usuario "Jesus" "Martinez"))) citas
---   show citas[0]
-  
+--   print (hayCitaProgramada usuario1 anfitrion1 fecha1 hora1 canal1)
+--   llenarCitas citasAgendadas  
+
 main :: IO ()
 main = do
-  -- let citas = agendarCita usuario anfitrion fecha hora canal (agendarCita usuario2 anfitrion2 fecha2 hora2 canal2 citasAgendadas)
-  -- imprimirCitas citas
-  print (hayCitaProgramada usuario anfitrion fecha hora canal)
+  putStrLn "Bienvenido al sistema de agendamiento de citas."
+  putStrLn "Por favor, siga las instrucciones para agendar una cita."
 
--- Resultado
--- Cita (Usuario "Juan" "Perez") (Anfitrion "Pedro" "Gomez") (Fecha 10 10 2021) (Hora 10 30) (Canal "Telefono" (Usuario "Juan" "Perez"))
+  -- Solicitar información del usuario
+  usuario <- pedirUsuario
 
+  -- Solicitar información del anfitrión
+  anfitrion <- pedirAnfitrion
+
+  -- Solicitar fecha y hora para la cita
+  putStrLn "Ingrese la fecha y hora para la cita:"
+  fecha <- pedirFecha
+  hora <- pedirHora
+
+  -- Solicitar canal de comunicación
+  canal <- (pedirCanal usuario)
+  -- Verificar si la cita propuesta cumple con los requisitos
+  if hayCitaProgramada usuario anfitrion fecha hora canal
+    then do
+      putStrLn "\nCita agendada con éxito."
+      let nuevaCita = Cita usuario anfitrion fecha hora canal
+      -- Agregar la nueva cita a la lista de citas
+      let citasActualizadas = citasAgendadas ++ [nuevaCita]
+      -- Imprimir todas las citas agendadas
+      putStrLn "\nCitas agendadas:\n"
+      imprimirCitas citasActualizadas
+  else do
+    putStrLn "\nLos datos proporcionados son incorrectos o no cumplen con los requisitos."
+    putStrLn "Por favor, intente de nuevo.\n"
+    -- Volver a solicitar la información de la cita
+    main
 
 
 
