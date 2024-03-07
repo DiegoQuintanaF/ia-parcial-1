@@ -1,5 +1,4 @@
 {-
-
   * En un mundo cada vez más digitalizado, la necesidad de optimizar la gestión del tiempo se vuelve primordial. En este 
   * escenario, surge la demanda de un asistente virtual capaz de facilitar el agendamiento de citas de manera eficiente y 
   * precisa. Este asistente, dotado de inteligencia artificial, es capaz de interactuar con los usuarios de diversas 
@@ -38,7 +37,7 @@
   *  específicos, las fechas, las horas, y los canales de solicitud.
 
   * Reglas:
-  *   - HayCitaProgramada(U, A, D, M, A) :- Usuario(U) & Anfitrion(A) & Fecha(F, D, M, A).
+  *   - esCitaProgramable(U, A, D, M, A) :- Usuario(U) & Anfitrion(A) & Fecha(F, D, M, A).
   *     Hay una cita programada si hay un usuario, un anfitrión y una fecha asociada.
 
   
@@ -89,102 +88,102 @@ instance Show Canal where
 instance Show Cita where
   show (Cita usuario anfitrion fecha hora canal) = "Hay una cita con el usuerio, " ++ show usuario ++ ", agendada con el anfitrion, " ++ show anfitrion ++ ", el " ++ show fecha ++ " a las " ++ show hora ++ ", agendada por " ++ show canal
 
--- Variables
-usuario1 = Usuario "Juan" "Perez"
-anfitrion1 = Anfitrion "Pedro" "Gomez"
-fecha1 = Fecha 10 10 2021
-hora1 = Hora 10 30
-canal1 = Canal "Telefono" usuario1
-
-usuario2 = Usuario "Diego" "Quintana"
-anfitrion2 = Anfitrion "Edwin" "Puertas"
-fecha2 = Fecha 22 10 2024
-hora2 = Hora 10 30
-canal2 = Canal "Telefono" usuario2
-
-citasAgendadas :: [Cita]
-citasAgendadas = []
-
 -- Reglas
+
 esUsuario :: Usuario -> Bool
-esUsuario (Usuario nombre apellido) = not (null nombre) && not (null apellido)
+esUsuario (Usuario nombre apellido) = not (null nombre) && not (null apellido) && length nombre > 1 && length apellido > 1
 
 esAnfitrion :: Anfitrion -> Bool
-esAnfitrion (Anfitrion nombre apellido) = not (null nombre) && not (null apellido)
+esAnfitrion (Anfitrion nombre apellido) = not (null nombre) && not (null apellido) && length nombre > 1 && length apellido > 1
 
 esFecha :: Fecha -> Bool
-esFecha (Fecha d m a) = d > 0 && m > 0 && a > 0
+esFecha (Fecha dia mes anio)
+  | anio < 1 = False
+  | mes < 1 || mes > 12 = False
+  | dia < 1 || dia > (diasMes mes anio) = False
+  | otherwise = True
+
+-- Función para obtener el número de días en un mes
+diasMes :: Int -> Int -> Int
+diasMes mes anio
+  | mes == 2 && esBisiesto anio = 29
+  | mes == 2 = 28
+  | mes `elem` [4, 6, 9, 11] = 30
+  | otherwise = 31
+
+-- Función para verificar si un año es bisiesto
+esBisiesto :: Int -> Bool
+esBisiesto anio
+  | anio `mod` 4 == 0 && anio `mod` 100 /= 0 = True
+  | anio `mod` 400 == 0 = True
+  | otherwise = False
 
 esHora :: Hora -> Bool
 esHora (Hora hora min) = hora >= 0 && hora < 24 && min >= 0 && min < 60
 
 esCanal :: Canal -> Bool
-esCanal (Canal c _) = not (null c)
+esCanal (Canal c _) = not (null c) && (c == "Telefono" || c == "Chat" || c == "Correo")
 
-
-hayCitaProgramada :: Usuario -> Anfitrion -> Fecha -> Hora -> Canal -> Bool
-hayCitaProgramada u a f h c = esUsuario u && esAnfitrion a && esFecha f && esHora h && esCanal c
+-- Reglas
+esCitaProgramable :: Usuario -> Anfitrion -> Fecha -> Hora -> Canal -> Bool
+esCitaProgramable u a f h c = esUsuario u && esAnfitrion a && esFecha f && esHora h && esCanal c
 
 agendarCita :: Usuario -> Anfitrion -> Fecha -> Hora -> Canal -> [Cita] -> [Cita]
 agendarCita u a f h c cs = cs ++ [(Cita u a f h c)]
 
+-- Obtener las citas agendadas de un anfitrión
 
--- Perdir datos
-pedirUsuario :: IO Usuario
-pedirUsuario = do
-  putStr "Ingrese su nombre: "
-  nombre <- getLine
-  putStr "Ingrese su apellido: "
-  apellido <- getLine
-  return (Usuario nombre apellido)
+nombreAnfitrion :: Cita -> String
+nombreAnfitrion (Cita _ (Anfitrion nombre _) _ _ _) = nombre
 
-pedirAnfitrion :: IO Anfitrion
-pedirAnfitrion = do
-  putStr "Ingrese el nombre del anfitrion: "
-  nombre <- getLine
-  putStr "Ingrese el apellido del anfitrion: "
-  apellido <- getLine
-  return (Anfitrion nombre apellido)
+apellidoAnfitrion :: Cita -> String
+apellidoAnfitrion (Cita _ (Anfitrion _ apellido) _ _ _) = apellido
 
-pedirFecha :: IO Fecha
-pedirFecha = do
-  putStr "Ingrese el dia: "
-  dia <- readLn
-  putStr "Ingrese el mes: "
-  mes <- readLn
-  putStr "Ingrese el año: "
-  anio <- readLn
-  return (Fecha dia mes anio)
+nombreUsuario :: Cita -> String
+nombreUsuario (Cita (Usuario nombre _) _ _ _ _) = nombre
 
-pedirHora :: IO Hora
-pedirHora = do
-  putStr "Ingrese la hora: "
-  hora <- readLn
-  putStr "Ingrese los minutos: "
-  minutos <- readLn
-  return (Hora hora minutos)
+apellidoUsuario :: Cita -> String
+apellidoUsuario (Cita (Usuario _ apellido) _ _ _ _) = apellido
 
-pedirCanal usuario = do
-  putStr "Ingrese el canal: "
-  canal <- getLine
-  return (Canal canal usuario)
+anfitrionCita :: Cita -> Anfitrion
+anfitrionCita (Cita _ anfitrion _ _ _) = anfitrion
 
--- Agendar cita
-agendarCitaIO :: [Cita] -> IO [Cita]
-agendarCitaIO citas = do
-  usuario <- pedirUsuario
-  anfitrion <- pedirAnfitrion
-  fecha <- pedirFecha
-  hora <- pedirHora
-  canal <- (pedirCanal usuario)
-  if hayCitaProgramada usuario anfitrion fecha hora canal
-    then return (agendarCita usuario anfitrion fecha hora canal citas)
-    else do
-      putStrLn "Datos incorrectos, intente de nuevo"
-      agendarCitaIO citas
+usuarioCita :: Cita -> Usuario
+usuarioCita (Cita usuario _ _ _ _) = usuario
+
+fechaCita :: Cita -> Fecha
+fechaCita (Cita _ _ fecha _ _) = fecha
+
+horaCita :: Cita -> Hora
+horaCita (Cita _ _ _ hora _) = hora
+
+canalCita :: Cita -> Canal
+canalCita (Cita _ _ _ _ canal) = canal
+
+-- Cita Usuario Anfitrion Fecha Hora Canal
+citasAnfitrion :: Anfitrion -> [Cita] -> [Cita]
+citasAnfitrion _ [] = []
+citasAnfitrion (Anfitrion nombre apellido) (c:cs) = do
+  if nombre == nombreAnfitrion c && apellido == apellidoAnfitrion c
+    then c : citasAnfitrion (Anfitrion nombre apellido) cs
+    else citasAnfitrion (Anfitrion nombre apellido) cs
+  
+menosDeCincoHoras :: Int -> [Cita] -> Bool
+menosDeCincoHoras _ [] = True
+menosDeCincoHoras horas (c:cs) = do
+  if horasTotalesAnfitrion 0 (c:cs) > 300
+    then False
+    else menosDeCincoHoras horas cs
+
+horasTotalesAnfitrion :: Int -> [Cita] -> Int
+horasTotalesAnfitrion horas [] = horas
+horasTotalesAnfitrion horas (c:cs) = do
+  horasTotalesAnfitrion (horas + 50) cs
+
+tieneMenosDeCincoHoras :: [Cita] -> Bool
+tieneMenosDeCincoHoras = menosDeCincoHoras 0 
 
 -- Impresion
-
 imprimir :: Int -> [Cita] -> IO ()
 imprimir _ [] = putStrLn ""
 imprimir count (c:cs) = do
@@ -193,57 +192,101 @@ imprimir count (c:cs) = do
 
 imprimirCitas :: [Cita] -> IO ()
 imprimirCitas = imprimir 1
-  
-llenarCitas :: [Cita] -> IO [Cita]
-llenarCitas (c: cs) = do
-  imprimirCitas (c:cs)
-  putStrLn "Desea agendar una cita? (s/n)"
-  respuesta <- getLine
-  if respuesta == "s"
-    then do
-      cs <- agendarCitaIO (c:cs)
-      llenarCitas cs
-    else return (c:cs)
 
--- main :: IO ()
--- main = do
---   print (hayCitaProgramada usuario1 anfitrion1 fecha1 hora1 canal1)
---   llenarCitas citasAgendadas  
+citasMismoDia :: Fecha -> [Cita] -> [Cita]
+citasMismoDia _ [] = []
+citasMismoDia fecha (c:cs) = do
+  if esMismaFecha fecha (fechaCita c)
+    then c : citasMismoDia fecha cs
+    else citasMismoDia fecha cs
+
+-- Horas a minutos
+minutosEnHora :: Hora -> Int
+minutosEnHora (Hora h m) = h * 60 + m
+
+-- Comprobar si una hora está entre dos horas
+estaEntre :: Hora -> Hora -> Bool
+estaEntre citaNueva citaExistente = (minutosEnHora citaExistente) < (minutosEnHora citaNueva) && (minutosEnHora citaExistente) + 65 > (minutosEnHora citaNueva) 
+
+-- Comprobar si son las mismas fechas
+esMismaFecha :: Fecha -> Fecha -> Bool
+esMismaFecha (Fecha d1 m1 a1) (Fecha d2 m2 a2) = d1 == d2 && m1 == m2 && a1 == a2
+
+-- Comprobar si una cita choca con otra cita
+chocaConOtraCita :: Cita -> [Cita] -> Bool
+chocaConOtraCita _ [] = False
+chocaConOtraCita nuevaCita (citaExistente:cs) = do
+  if esMismaFecha (fechaCita nuevaCita) (fechaCita citaExistente) && estaEntre (horaCita nuevaCita) (horaCita citaExistente)
+    then True
+    else chocaConOtraCita nuevaCita cs
+  
+-- Variables
+usuario1 = Usuario "Juan" "Perez"
+anfitrion1 = Anfitrion "Pedro" "Gomez"
+fecha1 = Fecha 10 11 2024
+hora1 = Hora 10 30
+canal1 = Canal "Telefono" usuario1
+cita1 = Cita usuario1 anfitrion1 fecha1 hora1 canal1
+
+usuario2 = Usuario "Diego" "Quintana"
+anfitrion2 = Anfitrion "Edwin" "Puertas"
+fecha2 = Fecha 10 10 2024
+hora2 = Hora 11 00
+canal2 = Canal "Telefono" usuario2
+cita2 = Cita usuario2 anfitrion2 fecha2 hora2 canal2
+
+usuario3 = Usuario "Luis" "Perez"
+anfitrion3 = Anfitrion "Pedro" "Gomez"
+fecha3 = Fecha 10 11 2024
+hora3 = Hora 11 40
+canal3 = Canal "Telefono" usuario3
+
+cita3 = Cita usuario3 anfitrion3 fecha3 hora3 canal3
+
+citas_agendadas = [cita1, cita2]
+
+test :: IO ()
+test = print ( cita3 `chocaConOtraCita` (citasAnfitrion anfitrion3 citas_agendadas)) -- True
+test2 :: IO ()
+test2 = print (horasTotalesAnfitrion 0 (citasAnfitrion anfitrion1 citas_agendadas)) -- 2
+test3 :: IO ()
+test3 = print (tieneMenosDeCincoHoras (citasAnfitrion anfitrion1 citas_agendadas)) -- True
+
+test4 :: IO ()
+test4 = print (citasMismoDia fecha1 citas_agendadas)
+
+-- esPosibleAgendarCita :: Cita -> [Cita] -> Bool
+-- esPosibleAgendarCita nCita citasAgendadas = do
+--   let usuario = usuarioCita nCita
+--   let anfitrion = anfitrionCita nCita
+--   let fecha = fechaCita nCita
+--   let hora = horaCita nCita
+--   let canal = canalCita nCita
+--   if esCitaProgramable usuario anfitrion fecha hora canal
+--     then True
+--     else False
+--   if tieneMenosDeCincoHoras (citasAnfitrion anfitrion citasAgendadas) && not (nCita `chocaConOtraCita` (citasAnfitrion anfitrion citasAgendadas))
+--     then True
+--     else False 
+
+
+esPosibleAgendarCita :: Cita -> [Cita] -> Bool
+esPosibleAgendarCita nCita citasAgendadas =
+  esCitaProgramable usuario anfitrion fecha hora canal &&
+  tieneMenosDeCincoHoras (citasAnfitrion anfitrion citasAgendadas) &&
+  not (nCita `chocaConOtraCita` (citasAnfitrion anfitrion citasAgendadas))
+  where
+    usuario = usuarioCita nCita
+    anfitrion = anfitrionCita nCita
+    fecha = fechaCita nCita
+    hora = horaCita nCita
+    canal = canalCita nCita
+
+test5 :: IO ()
+test5 = print (esPosibleAgendarCita cita3 citas_agendadas) -- False
+
 
 main :: IO ()
 main = do
-  putStrLn "Bienvenido al sistema de agendamiento de citas."
-  putStrLn "Por favor, siga las instrucciones para agendar una cita."
-
-  -- Solicitar información del usuario
-  usuario <- pedirUsuario
-
-  -- Solicitar información del anfitrión
-  anfitrion <- pedirAnfitrion
-
-  -- Solicitar fecha y hora para la cita
-  putStrLn "Ingrese la fecha y hora para la cita:"
-  fecha <- pedirFecha
-  hora <- pedirHora
-
-  -- Solicitar canal de comunicación
-  canal <- (pedirCanal usuario)
-  -- Verificar si la cita propuesta cumple con los requisitos
-  if hayCitaProgramada usuario anfitrion fecha hora canal
-    then do
-      putStrLn "\nCita agendada con éxito."
-      let nuevaCita = Cita usuario anfitrion fecha hora canal
-      -- Agregar la nueva cita a la lista de citas
-      let citasActualizadas = citasAgendadas ++ [nuevaCita]
-      -- Imprimir todas las citas agendadas
-      putStrLn "\nCitas agendadas:\n"
-      imprimirCitas citasActualizadas
-  else do
-    putStrLn "\nLos datos proporcionados son incorrectos o no cumplen con los requisitos."
-    putStrLn "Por favor, intente de nuevo.\n"
-    -- Volver a solicitar la información de la cita
-    main
-
-
-
-
+  putStrLn "Citas agendadas"
+  imprimirCitas citas_agendadas
