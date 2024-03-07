@@ -238,7 +238,7 @@ cita2 = Cita usuario2 anfitrion2 fecha2 hora2 canal2
 usuario3 = Usuario "Luis" "Perez"
 anfitrion3 = Anfitrion "Pedro" "Gomez"
 fecha3 = Fecha 10 11 2024
-hora3 = Hora 11 40
+hora3 = Hora 11 36
 canal3 = Canal "Telefono" usuario3
 
 cita3 = Cita usuario3 anfitrion3 fecha3 hora3 canal3
@@ -273,14 +273,15 @@ test4 = print (citasMismoDia fecha1 citas_agendadas)
 esPosibleAgendarCita :: Cita -> [Cita] -> Bool
 esPosibleAgendarCita nCita citasAgendadas =
   esCitaProgramable usuario anfitrion fecha hora canal &&
-  tieneMenosDeCincoHoras (citasAnfitrion anfitrion citasAgendadas) &&
-  not (nCita `chocaConOtraCita` (citasAnfitrion anfitrion citasAgendadas))
+  tieneMenosDeCincoHoras (citasAnfitrion anfitrion elDia) &&
+  not (nCita `chocaConOtraCita` elDia)
   where
     usuario = usuarioCita nCita
     anfitrion = anfitrionCita nCita
     fecha = fechaCita nCita
     hora = horaCita nCita
     canal = canalCita nCita
+    elDia = citasMismoDia fecha citas_agendadas
 
 test5 :: IO ()
 test5 = print (esPosibleAgendarCita cita3 citas_agendadas) -- False
